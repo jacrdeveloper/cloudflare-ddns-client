@@ -88,6 +88,32 @@ def get_external_ip():
     """
     return requests.get(EXTERNAL_IP_QUERY_API).json()['ip']
 
+def update_dns_subdomain(dns, ip_address, zone_id, auth):
+    	print(dns['id'])
+    	print(dns['content'])
+    	print(dns['name'])
+	dns_record_id = dns['id']
+    	existing_ip_address = dns['content']
+	subdomain_name = dns['name']
+	# Update the record as necessary
+	new_dns_record = dict(dns)
+	new_dns_record['content'] = ip_address
+	print('Updating the A record (ID {dns_record_id}) of (sub)domain {subdomain} (ID {zone_id}) to {ip_address}.'.format(dns_record_id=dns_record_id, zone_id=zone_id, subdomain=subdomain_name, ip_address=ip_address))
+	if existing_ip_address == ip_address:
+		print('DNS record is already up-to-date; taking no action')
+	else:
+		update_resp = requests.put(
+		    CLOUDFLARE_ZONE_DNS_RECORDS_UPDATE_API.format(zone_id=zone_id, dns_record_id=dns_record_id),
+		    headers=dict(auth.items() + [('Content-Type', 'application/json')]),
+		    data=json.dumps(new_dns_record),
+		)
+	if update_resp.json()['success']:
+	    print('DNS record updated successfully!')
+	else:
+	    print('DNS record failed to update.\nCloudFlare returned the following errors: {errors}.\nCloudFlare returned the following messages: {messages}'.format(errors=update_resp.json()['errors'], messages=update_resp.json()['messages']))
+
+
+
 
 def update_dns(subdomain, auth, ip_address):
     """
@@ -112,30 +138,13 @@ def update_dns(subdomain, auth, ip_address):
     zone_id = zone_names_to_ids[domain]
 
     # Find the A DNS record ID for this zone
-    dns_records = requests.get(CLOUDFLARE_ZONE_DNS_RECORDS_QUERY_API.format(zone_id=zone_id), headers=auth, params={'type': 'A', 'name': subdomain}).json()['result']
+    dns_records = requests.get(CLOUDFLARE_ZONE_DNS_RECORDS_QUERY_API.format(zone_id=zone_id), headers=auth, params={'type': 'A'}).json()['result']
     if not dns_records:
         print('We couldn\'t find an A record for the (sub)domain {subdomain}. Are you sure you\'ve created one?'.format(subdomain=subdomain))
         return
-    dns_record_id = dns_records[0]['id']
-    existing_ip_address = dns_records[0]['content']
-
-    # Update the record as necessary
-    new_dns_record = dict(dns_records[0])
-    new_dns_record['content'] = ip_address
-    print('Updating the A record (ID {dns_record_id}) of (sub)domain {subdomain} (ID {zone_id}) to {ip_address}.'.format(dns_record_id=dns_record_id, zone_id=zone_id, subdomain=subdomain, ip_address=ip_address))
-    if existing_ip_address == ip_address:
-        print('DNS record is already up-to-date; taking no action')
-    else:
-        update_resp = requests.put(
-            CLOUDFLARE_ZONE_DNS_RECORDS_UPDATE_API.format(zone_id=zone_id, dns_record_id=dns_record_id),
-            headers=dict(auth.items() + [('Content-Type', 'application/json')]),
-            data=json.dumps(new_dns_record),
-        )
-        if update_resp.json()['success']:
-            print('DNS record updated successfully!')
-        else:
-            print('DNS record failed to update.\nCloudFlare returned the following errors: {errors}.\nCloudFlare returned the following messages: {messages}'.format(errors=update_resp.json()['errors'], messages=update_resp.json()['messages']))
-
+    print(len(dns_records))
+    for dns in dns_records:
+        update_dns_subdomain(dns, ip_address, zone_id, auth)
 
 def main():
     """
