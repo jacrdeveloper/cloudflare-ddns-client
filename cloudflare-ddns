@@ -107,10 +107,10 @@ def update_dns_subdomain(dns, ip_address, zone_id, auth):
 		    headers=dict(auth.items() + [('Content-Type', 'application/json')]),
 		    data=json.dumps(new_dns_record),
 		)
-	if update_resp.json()['success']:
-	    print('DNS record updated successfully!')
-	else:
-	    print('DNS record failed to update.\nCloudFlare returned the following errors: {errors}.\nCloudFlare returned the following messages: {messages}'.format(errors=update_resp.json()['errors'], messages=update_resp.json()['messages']))
+		if update_resp.json()['success']:
+		    print('DNS record updated successfully!')
+		else:
+		    print('DNS record failed to update.\nCloudFlare returned the following errors: {errors}.\nCloudFlare returned the following messages: {messages}'.format(errors=update_resp.json()['errors'], messages=update_resp.json()['messages']))
 
 
 
